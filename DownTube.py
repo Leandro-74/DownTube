@@ -2,9 +2,13 @@ import os
 import sys
 from yt_dlp import YoutubeDL
 
-# Define a pasta de Músicas do usuário como caminho padrão para salvar os downloads
+# Define a pasta de Músicas do usuário como caminho padrão para salvar as músicas e playlists
 pasta_download = os.path.join(os.path.expanduser("~"), "Music")
 os.makedirs(pasta_download, exist_ok=True)
+
+# Define a pasta de Vídeos do usuário como caminho padrão para salvar os vídeos
+pasta_video = os.path.join(os.path.expanduser("~"), "Videos")
+os.makedirs(pasta_video, exist_ok=True)
 
 # Localiza os arquivos do ffmpeg
 def get_ffmpeg_path():
@@ -30,77 +34,117 @@ opcoes_base_audio = {
     ],
 }
 
+# Define as opções globais para download de vídeos
+opcoes_base_video = {
+    "format": "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best",
+    "ffmpeg_location": ffmpeg_dir,
+    "outtmpl": os.path.join(pasta_video, "%(title)s.%(ext)s"),
+    "merge_output_format": "mp4",
+}
+
+
 # Função padrão para limpar a tela
 def limpar_tela():
     os.system("cls" if os.name == "nt" else "clear")
 
-# Função que executa o download de músicas
-def music():
-    limpar_tela()
-    print("{:=^100}".format(" Baixar Música ")+"\n")
-    music = input("Qual o link da música a ser baixada?: ")
-    opcoes = opcoes_base_audio.copy()
-    with YoutubeDL(opcoes) as ydl:
-        ydl.download([music])
-    limpar_tela()
-    music_finish()
+# Função que executa o download de vídeos
+def baixar_video():
+    while True:
+        limpar_tela()
 
-# Função da tela de finalização em download de músicas
-def music_finish():
-    print("{:=^100}".format(" Baixar Música ")+"\n")
-    print("Música baixada com sucesso!\n")
-    print("="*100)
-    print("1 - Voltar")
-    print("2 - Baixar outra música\n")
-    finish_opt = input("Escolha uma opção: \n")
-    if finish_opt == "2":
-        music()
-    elif finish_opt == "1":
+        print("{:=^100}".format(" Baixar Vídeo ")+"\n")
+        link_video = input("Qual o link do vídeo a ser baixado?: ")
+
+        opcoes = opcoes_base_video.copy()
+        with YoutubeDL(opcoes) as ydl:
+            ydl.download([link_video])
         limpar_tela()
-    else:
+
+        while True:
+            print("{:=^100}".format(" Baixar Vídeo ")+"\n")
+            print("Vídeo baixado com sucesso!\n")
+            print("="*100)
+            print("1 - Voltar")
+            print("2 - Baixar outro vídeo\n")
+            finish_opt = input("Escolha uma opção: \n")
+            if finish_opt == "2":
+                break
+            elif finish_opt == "1":
+                return
+            else:
+                limpar_tela()
+                print("opção inválida\n")
+
+# Função que executa o download de músicas
+def baixar_musica():
+    while True:
         limpar_tela()
-        print("opção inválida\n")
-        music_finish()
+
+        print("{:=^100}".format(" Baixar Música ")+"\n")
+        link_musica = input("Qual o link da música a ser baixada?: ")
+
+        opcoes = opcoes_base_audio.copy()
+        with YoutubeDL(opcoes) as ydl:
+            ydl.download([link_musica])
+        limpar_tela()
+
+        while True:
+            print("{:=^100}".format(" Baixar Música ")+"\n")
+            print("Música baixada com sucesso!\n")
+            print("="*100)
+            print("1 - Voltar")
+            print("2 - Baixar outra música\n")
+            finish_opt = input("Escolha uma opção: \n")
+            if finish_opt == "2":
+                break
+            elif finish_opt == "1":
+                return
+            else:
+                limpar_tela()
+                print("opção inválida\n")
 
 # Função que executa o download de playlists
-def playlist():
-    limpar_tela()
-    print("{:=^100}".format(" Baixar Playlist ")+"\n")
-    playlist = input("Qual o link da playlist a ser baixada?: ")
-    opcoes = opcoes_base_audio.copy()
-    opcoes["outtmpl"] = os.path.join(
-        pasta_download,
-        "%(playlist_title)s",
-        "%(playlist_index)02d - %(title)s.%(ext)s"
-    )
-    opcoes["ignoreerrors"] = True
-    with YoutubeDL(opcoes) as ydl:
-        ydl.download([playlist])
-    limpar_tela()
-    playlist_finish()
+def baixar_playlist():
+    while True:
+        limpar_tela()
 
-# Função da tela de finalização em download de playlists
-def playlist_finish():
-    print("{:=^100}".format(" Baixar Playlist ")+"\n")
-    print("Playlist baixada com sucesso!\n")
-    print("="*100+"\n")
-    print("1 - Voltar")
-    print("2 - Baixar outra playlist\n")
-    finish_opt = input("Escolha uma opção: \n")
-    if finish_opt == "2":
-        playlist()
-    elif finish_opt == "1":
+        print("{:=^100}".format(" Baixar Playlist ")+"\n")
+        link_playlist = input("Qual o link da playlist a ser baixada?: ")
+
+        opcoes = opcoes_base_audio.copy()
+        opcoes["outtmpl"] = os.path.join(
+            pasta_download,
+            "%(playlist_title)s",
+            "%(playlist_index)02d - %(title)s.%(ext)s"
+        )
+
+        opcoes["ignoreerrors"] = True
+        with YoutubeDL(opcoes) as ydl:
+            ydl.download([link_playlist])
         limpar_tela()
-    else:
-        limpar_tela()
-        print("opção inválida")
-        playlist_finish()
+
+        while True:
+            print("{:=^100}".format(" Baixar Playlist ")+"\n")
+            print("Playlist baixada com sucesso!\n")
+            print("="*100+"\n")
+            print("1 - Voltar")
+            print("2 - Baixar outra playlist\n")
+            finish_opt = input("Escolha uma opção: \n")
+
+            if finish_opt == "2":
+                break
+            elif finish_opt == "1":
+                return
+            else:
+                limpar_tela()
+                print("opção inválida\n")
 
 # Tela inicial
 def init():
     print("{:=^100}".format(" DownTube ")+"\n")
     print("1 - Baixar música")
     print("2 - Baixar playlist")
+    print("3 - Baixar Vídeo")
     print("0 - Sair\n")
     print("="*100+"\n")
 
@@ -113,9 +157,11 @@ while True:
     opt = input("Digite a opção desejada: ")
     
     if opt == "1":
-        music()
+        baixar_musica()
     elif opt == "2":
-        playlist()
+        baixar_playlist()
+    elif opt == "3":
+        baixar_video()
     elif opt == "0":
         break
     else:
