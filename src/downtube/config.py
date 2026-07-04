@@ -35,7 +35,7 @@ def caminhoPadrão():
 
     # Define o caminho para as pastas em português
     pastaMusica_pt = os.path.join(home, "Músicas")
-    pastaVideo_pt = os.path.join(home, "Videos")
+    pastaVideo_pt = os.path.join(home, "Vídeos")
 
     # Define a pasta padrão para download das músicas e vídeos, dando prioridade para pt
     pastaMusica = pastaMusica_pt if os.path.exists(pastaMusica_pt) else pastaMusica_en
@@ -74,10 +74,15 @@ def caminhoPersonalizado():
 # Define as opções globais para download de músicas e playlists
 opcoes_base_audio = {
     "format": "bestaudio/best",
-    "cookiesfrombrowser": ("brave",),
     "remote_components": ["ejs:github"],
     "ffmpeg_location": ffmpeg_dir,
     "outtmpl": os.path.join(pastaMusica, "%(title)s.%(ext)s"),
+    "extractor_args": {
+        "youtube": {
+            "player_client": ["android", "ios", "web"],
+            "skip": ["hls", "dash"]
+        }
+    },
     "postprocessors": [
         {
             "key": "FFmpegExtractAudio",
@@ -90,8 +95,14 @@ opcoes_base_audio = {
 # Define as opções globais para download de vídeos
 opcoes_base_video = {
     "format": "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best",
-    "cookiesfrombrowser": ("brave",),
+    "remote_components": ["ejs:github"],
     "ffmpeg_location": ffmpeg_dir,
+    "extractor_args": {
+        "youtube": {
+            "player_client": ["android", "ios", "web"],
+            "skip": ["hls", "dash"]
+        }
+    },
     "outtmpl": os.path.join(pastaVideo, "%(title)s.%(ext)s"),
     "merge_output_format": "mp4",
 }
