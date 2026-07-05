@@ -17,7 +17,12 @@ def get_ffmpeg_path():
     # Se estiver rodando como executável do PyInstaller
     if getattr(sys, 'frozen', False):
         return sys._MEIPASS
-    # Se estiver rodando como script .py normal
+    
+    # Se estiver instalado no sistema (via makepkg), os binários estão em /usr/bin
+    if os.path.exists('/usr/bin/ffmpeg') and os.path.exists('/usr/bin/bgutil-pot'):
+        return '/usr/bin'
+    
+    # Caso contrário, usa o diretório do script (modo desenvolvimento)
     return os.path.dirname(os.path.abspath(__file__))
 
 # Define o caminho dos arquivos do ffmpeg
@@ -37,6 +42,11 @@ def get_bgutil_binary_path():
 
 # Localiza o caminho do yt-dlp-plugins
 def get_plugin_path():
+    # Primeiro tenta o caminho de instalação system-wide
+    system_plugin = '/usr/share/downtube/yt-dlp-plugins/bgutil-ytdlp-pot-provider'
+    if os.path.isdir(system_plugin):
+        return system_plugin
+    # Fallback para o diretório local (desenvolvimento)
     return os.path.join(ffmpeg_dir, "yt-dlp-plugins", "bgutil-ytdlp-pot-provider")
 
 

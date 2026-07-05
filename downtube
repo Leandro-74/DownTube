@@ -1,0 +1,11 @@
+#!/bin/bash
+# Executa o DownTube a partir da instalação system-wide
+
+# Localiza o diretório onde os scripts foram instalados
+SCRIPT_DIR="/usr/share/downtube/src"
+
+# Adiciona o diretório ao PYTHONPATH para importar os módulos
+export PYTHONPATH="$SCRIPT_DIR:$PYTHONPATH"
+
+# Executa o main.py
+python3 "$SCRIPT_DIR/main.py"

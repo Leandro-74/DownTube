@@ -4,7 +4,10 @@ from yt_dlp import YoutubeDL
 import config
 import downloaders
 
+# Adiciona o diretório atual ao path para permitir importação dos módulos
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 # Tela inicial
+
 def init():
     print("{:=^100}".format(" DownTube ")+"\n")
     print("1 - Baixar música")
