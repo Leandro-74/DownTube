@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# Launcher do DownTube - instalado em /usr/bin/downtube pelo pacote Arch
+exec python3 /usr/lib/downtube/main.py "$@"
