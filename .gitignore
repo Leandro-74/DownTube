@@ -13,3 +13,11 @@ src/downtube/bgutil-pot
 src/downtube/qjs
 src/downtube/backup/
 src/downtube/__pycache__/
+src/downtube/ffmpeg
+src/downtube/ffmpeg.exe
+src/downtube/ffprobe
+src/downtube/ffprobe.exe
+src/downtube/bgutil-pot
+src/downtube/qjs
+src/downtube/backup/
+src/downtube/__pycache__/
