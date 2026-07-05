@@ -1,24 +1,24 @@
+.git/
 venv/
 __pycache__/
 .vscode/
 *.mp3
-#PyInstaller
+
+# PyInstaller
 /build
 /dist
-*.specsrc/downtube/ffmpeg
-src/downtube/ffmpeg.exe
-src/downtube/ffprobe
-src/downtube/ffprobe.exe
-src/downtube/bgutil-pot
-src/downtube/qjs
-src/downtube/backup/
-src/downtube/__pycache__/
+*.spec
+
+# Binários grandes - não versionar
 src/downtube/ffmpeg
 src/downtube/ffmpeg.exe
 src/downtube/ffprobe
 src/downtube/ffprobe.exe
 src/downtube/bgutil-pot
+src/downtube/bgutil-pot.exe
 src/downtube/qjs
 src/downtube/backup/
 src/downtube/__pycache__/
+
+# Sobra do clone antigo do provider em TypeScript
 bgutil-ytdlp-pot-provider/
