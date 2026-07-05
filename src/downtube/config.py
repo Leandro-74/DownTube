@@ -22,33 +22,24 @@ def get_ffmpeg_path():
 
 # Define o caminho dos arquivos do ffmpeg
 ffmpeg_dir = get_ffmpeg_path()
+
+# caminho PATH para uso do plugin do PO Token
 os.environ["PATH"] = ffmpeg_dir + os.pathsep + os.environ.get("PATH", "")
 
-# ---------------------------------------------------------------------------
-# PO Token provider (bgutil-pot) - necessário pra liberar resoluções acima
-# de 360p, já que o YouTube exige um PO Token pra formatos de maior qualidade
-# ---------------------------------------------------------------------------
-
+# Porta para rodar o servidor do BGUTIL
 BGUTIL_PORT = 4416
 
+# Localiza o binário do bgutil-pot
 def get_bgutil_binary_path():
-    """Localiza o binário do bgutil-pot, tanto rodando como script quanto
-    congelado pelo PyInstaller (nesse caso ele fica junto do ffmpeg)."""
     base_dir = ffmpeg_dir
     nome_binario = "bgutil-pot.exe" if os.name == "nt" else "bgutil-pot"
     return os.path.join(base_dir, nome_binario)
 
+# Localiza o caminho do yt-dlp-plugins
 def get_plugin_path():
-    """Caminho do plugin yt_dlp_plugins embutido junto do projeto/bundle."""
     return os.path.join(ffmpeg_dir, "yt-dlp-plugins", "bgutil-ytdlp-pot-provider")
 
-# Garante que o plugin é encontrado independente de pip install/PYTHONPATH,
-# tanto em dev quanto dentro do .exe/pacote Arch.
-# IMPORTANTE: só adiciona o caminho manual (yt-dlp-plugins/) se o plugin
-# ainda não estiver acessível de outra forma (ex: instalado via pip). Fazer
-# isso incondicionalmente faz o yt-dlp enxergar duas cópias do mesmo plugin
-# (uma via site-packages, outra via este caminho) e registrar a mesma
-# classe duas vezes, quebrando com "already registered".
+
 _plugin_spec = importlib.util.find_spec("yt_dlp_plugins.extractor.getpot_bgutil_http")
 if _plugin_spec is None:
     plugin_path = get_plugin_path()
@@ -57,8 +48,8 @@ if _plugin_spec is None:
 
 _bgutil_processo = None
 
+# Sobe o servidor do bgutil-pot em background
 def iniciar_bgutil_server():
-    """Sobe o servidor bgutil-pot em background, se ainda não estiver rodando."""
     global _bgutil_processo
 
     if _bgutil_processo is not None and _bgutil_processo.poll() is None:
@@ -81,6 +72,7 @@ def iniciar_bgutil_server():
     except OSError as e:
         print(f"[aviso] Falha ao iniciar bgutil-pot: {e}")
 
+# Encerra o servidor quando o processo do script for encerrado
 def parar_bgutil_server():
     global _bgutil_processo
     if _bgutil_processo is not None and _bgutil_processo.poll() is None:
@@ -90,6 +82,7 @@ def parar_bgutil_server():
         except subprocess.TimeoutExpired:
             _bgutil_processo.kill()
 
+# Inicia o servidor
 iniciar_bgutil_server()
 
 pastaMusica = ""
