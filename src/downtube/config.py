@@ -1,7 +1,11 @@
 # Arquivo configurações, contém caminhos padrões e opção para configurações personalizadas
 
+import atexit
 import os
+import subprocess
 import sys
+import time
+import importlib.util
 from yt_dlp import YoutubeDL
 
 
@@ -18,6 +22,75 @@ def get_ffmpeg_path():
 
 # Define o caminho dos arquivos do ffmpeg
 ffmpeg_dir = get_ffmpeg_path()
+os.environ["PATH"] = ffmpeg_dir + os.pathsep + os.environ.get("PATH", "")
+
+# ---------------------------------------------------------------------------
+# PO Token provider (bgutil-pot) - necessário pra liberar resoluções acima
+# de 360p, já que o YouTube exige um PO Token pra formatos de maior qualidade
+# ---------------------------------------------------------------------------
+
+BGUTIL_PORT = 4416
+
+def get_bgutil_binary_path():
+    """Localiza o binário do bgutil-pot, tanto rodando como script quanto
+    congelado pelo PyInstaller (nesse caso ele fica junto do ffmpeg)."""
+    base_dir = ffmpeg_dir
+    nome_binario = "bgutil-pot.exe" if os.name == "nt" else "bgutil-pot"
+    return os.path.join(base_dir, nome_binario)
+
+def get_plugin_path():
+    """Caminho do plugin yt_dlp_plugins embutido junto do projeto/bundle."""
+    return os.path.join(ffmpeg_dir, "yt-dlp-plugins", "bgutil-ytdlp-pot-provider")
+
+# Garante que o plugin é encontrado independente de pip install/PYTHONPATH,
+# tanto em dev quanto dentro do .exe/pacote Arch.
+# IMPORTANTE: só adiciona o caminho manual (yt-dlp-plugins/) se o plugin
+# ainda não estiver acessível de outra forma (ex: instalado via pip). Fazer
+# isso incondicionalmente faz o yt-dlp enxergar duas cópias do mesmo plugin
+# (uma via site-packages, outra via este caminho) e registrar a mesma
+# classe duas vezes, quebrando com "already registered".
+_plugin_spec = importlib.util.find_spec("yt_dlp_plugins.extractor.getpot_bgutil_http")
+if _plugin_spec is None:
+    plugin_path = get_plugin_path()
+    if os.path.isdir(plugin_path):
+        sys.path.insert(0, plugin_path)
+
+_bgutil_processo = None
+
+def iniciar_bgutil_server():
+    """Sobe o servidor bgutil-pot em background, se ainda não estiver rodando."""
+    global _bgutil_processo
+
+    if _bgutil_processo is not None and _bgutil_processo.poll() is None:
+        return  # já está rodando
+
+    binario = get_bgutil_binary_path()
+    if not os.path.isfile(binario):
+        # Não impede o app de funcionar; só fica sem PO Token (volta pro 360p)
+        print(f"[aviso] bgutil-pot não encontrado em {binario}, seguindo sem PO Token provider.")
+        return
+
+    try:
+        _bgutil_processo = subprocess.Popen(
+            [binario, "server", "--port", str(BGUTIL_PORT)],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        atexit.register(parar_bgutil_server)
+        time.sleep(0.5)  # pequeno respiro pra ele subir antes do primeiro request
+    except OSError as e:
+        print(f"[aviso] Falha ao iniciar bgutil-pot: {e}")
+
+def parar_bgutil_server():
+    global _bgutil_processo
+    if _bgutil_processo is not None and _bgutil_processo.poll() is None:
+        _bgutil_processo.terminate()
+        try:
+            _bgutil_processo.wait(timeout=3)
+        except subprocess.TimeoutExpired:
+            _bgutil_processo.kill()
+
+iniciar_bgutil_server()
 
 pastaMusica = ""
 pastaVideo = ""
@@ -77,12 +150,6 @@ opcoes_base_audio = {
     "remote_components": ["ejs:github"],
     "ffmpeg_location": ffmpeg_dir,
     "outtmpl": os.path.join(pastaMusica, "%(title)s.%(ext)s"),
-    "extractor_args": {
-        "youtube": {
-            "player_client": ["android", "ios", "web"],
-            "skip": ["hls", "dash"]
-        }
-    },
     "postprocessors": [
         {
             "key": "FFmpegExtractAudio",
@@ -97,12 +164,6 @@ opcoes_base_video = {
     "format": "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best",
     "remote_components": ["ejs:github"],
     "ffmpeg_location": ffmpeg_dir,
-    "extractor_args": {
-        "youtube": {
-            "player_client": ["android", "ios", "web"],
-            "skip": ["hls", "dash"]
-        }
-    },
     "outtmpl": os.path.join(pastaVideo, "%(title)s.%(ext)s"),
     "merge_output_format": "mp4",
 }

@@ -17,12 +17,82 @@ def baixar_video():
         print("{:=^100}".format(" Baixar Vídeo ")+"\n")
         link_video = input("Qual o link do vídeo a ser baixado?: ")
 
-        # Faz uma cópia das configurações para vídeo padrão 
-        opcoes = config.opcoes_base_video.copy()
+        # Cópia temporária das configs pra extração das informações do vídeo
+        opcoes_extracao = config.opcoes_base_video.copy()
 
-        # Chama o yt_dlp e baixa o vídeo
-        with YoutubeDL(opcoes) as ydl:
-            ydl.download([link_video])
+        # Coleta as informações do vídeo e lista as resoluções disponíveis para o usuário escolher
+        try:
+            with YoutubeDL(opcoes_extracao) as ydl:
+                infos = ydl.extract_info(link_video, download=False)
+            
+            formatos = infos.get("formats", [])
+            opcoes_video = []
+
+            resolucoes_vistas = set()
+
+            # Checa se o vídeo tem formatos válidos e registra suas resoluções
+            for  f in formatos:
+                if f.get('vcodec') != 'none' and f.get('height'):
+                    res_height = f.get('height')
+                    ext = f.get('ext', 'mp4')
+                    format_id = f.get('format_id')
+                    note = f.get('format_note', '')
+
+                    if res_height not in resolucoes_vistas:
+                        resolucoes_vistas.add(res_height)
+                        opcoes_video.append({
+                            'id': format_id,
+                            'res': f"{res_height}p",
+                            'ext': ext,
+                            'note': note
+                        })
+
+            # Organiza as resoluões em ordem da menor pra maior
+            opcoes_video = sorted(opcoes_video, key=lambda x: int(x['res'].replace('p', '')))
+
+            if not opcoes_video:
+                print("Nenhuma resolução de vídeo encontrada!")
+                input("Pressione ENTER para tentar novamente...")
+                continue
+
+            # Exibe as resoluções encontradas e pede a escolha de uma delas
+            limpar_tela()
+            print("{:=^100}".format(f" Resolução "))
+            for i, opt in enumerate(opcoes_video, start=1):
+                print(f"[{i}] {opt['res']} ({opt['ext']}) - {opt['note']}")
+            print("[0] Cancelar\n")
+
+            escolha = input("Qual a resolução desejada?: ")
+
+            if escolha == "0":
+                limpar_tela()
+                return
+            idx = int(escolha)-1
+            if idx < 0 or idx >= len(opcoes_video):
+                print("Opção inválida.")
+                input("\nPressione ENTER para continuar...")
+                continue
+
+            # Define a opção escolhida pelo usuário
+            formato_escolhido = opcoes_video[idx]['id']
+
+            # Faz uma cópia das opções padrão para download de vídeos
+            opcoes_download = config.opcoes_base_video.copy()
+
+            # Define o download do formato/resolução escolhido + o melhor áudio e juntar no final
+            opcoes_download["format"] = f"{formato_escolhido}+bestaudio/best"
+
+            limpar_tela()
+            print(f"Baixando em {opcoes_video[idx]['res']}...\n")
+            with YoutubeDL(opcoes_download) as ydl:
+                ydl.download([link_video])
+
+        # Caso ocorra algum erro no processo, informa o erro e da continuidade
+        except Exception as e:
+            print(f"Ocorreu um erro ao processar o vídeo: {e}")
+            input("\nPressione ENTER para continuar...")
+            continue
+
         limpar_tela()
 
         # Tela de encerramento para download de vídeos

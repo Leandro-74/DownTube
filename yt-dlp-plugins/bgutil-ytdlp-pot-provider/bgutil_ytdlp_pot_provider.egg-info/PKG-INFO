@@ -1,0 +1,5 @@
+Metadata-Version: 2.4
+Name: bgutil-ytdlp-pot-provider
+Version: 0.8.1
+Summary: PO Token provider plugin for yt-dlp (bgutil, Rust backend)
+Requires-Python: >=3.9

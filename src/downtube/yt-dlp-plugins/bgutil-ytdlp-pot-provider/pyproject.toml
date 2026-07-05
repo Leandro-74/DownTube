@@ -1,0 +1,12 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bgutil-ytdlp-pot-provider"
+version = "0.8.1"
+description = "PO Token provider plugin for yt-dlp (bgutil, Rust backend)"
+requires-python = ">=3.9"
+
+[tool.setuptools.packages.find]
+include = ["yt_dlp_plugins*"]
