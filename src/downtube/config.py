@@ -50,7 +50,11 @@ def get_plugin_path():
     return os.path.join(ffmpeg_dir, "yt-dlp-plugins", "bgutil-ytdlp-pot-provider")
 
 
-_plugin_spec = importlib.util.find_spec("yt_dlp_plugins.extractor.getpot_bgutil_http")
+try:
+    _plugin_spec = importlib.util.find_spec("yt_dlp_plugins.extractor.getpot_bgutil_http")
+except ModuleNotFoundError:
+    _plugin_spec = None
+
 if _plugin_spec is None:
     plugin_path = get_plugin_path()
     if os.path.isdir(plugin_path):
