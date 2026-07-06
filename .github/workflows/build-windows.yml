@@ -1,0 +1,65 @@
+name: Build Windows executable
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch: {}
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: src/downtube
+    steps:
+      - name: Checkout do repositório
+        uses: actions/checkout@v4
+
+      - name: Configura Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instala dependências Python
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r ../../requirements.txt
+          pip install pyinstaller
+
+      - name: Baixa o ffmpeg (Windows)
+        shell: pwsh
+        run: |
+          Invoke-WebRequest -Uri "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip" -OutFile "ffmpeg.zip"
+          Expand-Archive -Path "ffmpeg.zip" -DestinationPath "ffmpeg_extracted"
+          $bin = Get-ChildItem -Path "ffmpeg_extracted" -Recurse -Filter "ffmpeg.exe" | Select-Object -First 1
+          Copy-Item $bin.FullName -Destination "ffmpeg.exe"
+          $binProbe = Get-ChildItem -Path "ffmpeg_extracted" -Recurse -Filter "ffprobe.exe" | Select-Object -First 1
+          Copy-Item $binProbe.FullName -Destination "ffprobe.exe"
+
+      - name: Baixa o bgutil-pot (PO Token provider)
+        shell: pwsh
+        run: |
+          Invoke-WebRequest -Uri "https://github.com/jim60105/bgutil-ytdlp-pot-provider-rs/releases/download/v0.8.1/bgutil-pot-windows-x86_64.exe" -OutFile "bgutil-pot.exe"
+
+      - name: Gera o executável com PyInstaller
+        run: |
+          pyinstaller --onefile --console --name downtube `
+            --add-binary "ffmpeg.exe;." `
+            --add-binary "ffprobe.exe;." `
+            --add-binary "bgutil-pot.exe;." `
+            --add-data "yt-dlp-plugins;yt-dlp-plugins" `
+            --collect-all yt_dlp `
+            main.py
+
+      - name: Sobe o .exe como artefato do build
+        uses: actions/upload-artifact@v4
+        with:
+          name: downtube-windows
+          path: src/downtube/dist/downtube.exe
+
+      - name: Anexa o .exe na Release (quando disparado por tag)
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: src/downtube/dist/downtube.exe
