@@ -2,7 +2,7 @@
 
 # 📥 DownTube
 
-**Um TUI simples e rápido pra baixar vídeos, músicas e playlists do YouTube**
+**Um CLI simples e rápido pra baixar vídeos, músicas e playlists do YouTube**
 
 Construído em cima do [yt-dlp](https://github.com/yt-dlp/yt-dlp), com suporte automático a PO Token pra garantir resoluções em alta qualidade (720p, 1080p+).
 
@@ -105,6 +105,6 @@ Este projeto está sob a licença MIT — veja o arquivo [LICENSE](LICENSE) para
 
 <div align="center">
 
-Feito com 🧉 por [Leandro A. Rodrigues](https://github.com/Leandro-74)
+Feito por [Leandro A. Rodrigues](https://github.com/Leandro-74)
 
 </div>
