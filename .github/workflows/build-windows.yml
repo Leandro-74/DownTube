@@ -45,6 +45,7 @@ jobs:
       - name: Gera o executável com PyInstaller
         run: |
           pyinstaller --onefile --console --name downtube `
+            --icon "icon.ico" `
             --add-binary "ffmpeg.exe;." `
             --add-binary "ffprobe.exe;." `
             --add-binary "bgutil-pot.exe;." `
