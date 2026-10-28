@@ -1,188 +1,133 @@
 import os
-import sys
+
 from yt_dlp import YoutubeDL
+
 import config
 
 
-# Função padrão para limpar a tela
 def limpar_tela():
     os.system("cls" if os.name == "nt" else "clear")
 
-# Função que executa o download de vídeos
-def baixar_video():
+
+def _cabecalho(titulo):
+    print("{:=^100}".format(f" {titulo} ") + "\n")
+
+
+def _pedir_link(titulo, pergunta):
+    limpar_tela()
+    _cabecalho(titulo)
+    return input(pergunta).strip()
+
+
+def _baixar(titulo, link, opcoes):
+    try:
+        with YoutubeDL(opcoes) as ydl:
+            ydl.download([link])
+        return True
+    except Exception as e:
+        print(f"\nOcorreu um erro ao baixar: {e}")
+        input("\nPressione ENTER para continuar...")
+        return False
+
+
+def _menu_final(titulo):
+    """Depois de um download: True = baixar outro, False = voltar ao menu."""
     while True:
         limpar_tela()
+        _cabecalho(titulo)
+        print("Download concluído!\n")
+        print("=" * 100 + "\n")
+        print("1 - Voltar")
+        print("2 - Baixar outro\n")
+        opt = input("Escolha uma opção: ").strip()
 
-        # Define o link do vídeo a ser baixado
-        print("{:=^100}".format(" Baixar Vídeo ")+"\n")
-        link_video = input("Qual o link do vídeo a ser baixado?: ")
+        if opt == "2":
+            return True
+        if opt == "1":
+            return False
+        else:
+            limpar_tela()
+            print("Opção inválida.\n")
 
-        # Cópia temporária das configs pra extração das informações do vídeo
-        opcoes_extracao = config.opcoes_base_video.copy()
 
-        # Coleta as informações do vídeo e lista as resoluções disponíveis para o usuário escolher
+def _baixar_em_loop(titulo, pergunta, montar_opcoes):
+    while True:
+        link = _pedir_link(titulo, pergunta)
+        if not link:
+            return
+
+        if not _baixar(titulo, link, montar_opcoes()):
+            continue
+        if not _menu_final(titulo):
+            return
+
+
+def baixar_musica():
+    _baixar_em_loop(
+        "Baixar Música",
+        "Qual o link da música a ser baixada?: ",
+        config.opcoes_audio,
+    )
+
+
+def baixar_playlist():
+    _baixar_em_loop(
+        "Baixar Playlist",
+        "Qual o link da playlist a ser baixada?: ",
+        config.opcoes_playlist,
+    )
+
+
+def baixar_video():
+    while True:
+        link = _pedir_link("Baixar Vídeo", "Qual o link do vídeo a ser baixado?: ")
+        if not link:
+            return
+
+        # Lista as resoluções disponíveis sem baixar nada
         try:
-            with YoutubeDL(opcoes_extracao) as ydl:
-                infos = ydl.extract_info(link_video, download=False)
-            
-            formatos = infos.get("formats", [])
-            opcoes_video = []
-
-            resolucoes_vistas = set()
-
-            # Checa se o vídeo tem formatos válidos e registra suas resoluções
-            for  f in formatos:
-                if f.get('vcodec') != 'none' and f.get('height'):
-                    res_height = f.get('height')
-                    ext = f.get('ext', 'mp4')
-                    format_id = f.get('format_id')
-                    note = f.get('format_note', '')
-
-                    if res_height not in resolucoes_vistas:
-                        resolucoes_vistas.add(res_height)
-                        opcoes_video.append({
-                            'id': format_id,
-                            'res': f"{res_height}p",
-                            'ext': ext,
-                            'note': note
-                        })
-
-            # Organiza as resoluões em ordem da menor pra maior
-            opcoes_video = sorted(opcoes_video, key=lambda x: int(x['res'].replace('p', '')))
-
-            if not opcoes_video:
-                print("Nenhuma resolução de vídeo encontrada!")
-                input("Pressione ENTER para tentar novamente...")
-                continue
-
-            # Exibe as resoluções encontradas e pede a escolha de uma delas
-            limpar_tela()
-            print("{:=^100}".format(f" Resolução "))
-            for i, opt in enumerate(opcoes_video, start=1):
-                print(f"[{i}] {opt['res']} ({opt['ext']}) - {opt['note']}")
-            print("[0] Cancelar\n")
-
-            escolha = input("Qual a resolução desejada?: ")
-
-            if escolha == "0":
-                limpar_tela()
-                return
-            idx = int(escolha)-1
-            if idx < 0 or idx >= len(opcoes_video):
-                print("Opção inválida.")
-                input("\nPressione ENTER para continuar...")
-                continue
-
-            # Define a opção escolhida pelo usuário
-            formato_escolhido = opcoes_video[idx]['id']
-
-            # Faz uma cópia das opções padrão para download de vídeos
-            opcoes_download = config.opcoes_base_video.copy()
-
-            # Define o download do formato/resolução escolhido + o melhor áudio e juntar no final
-            opcoes_download["format"] = f"{formato_escolhido}+bestaudio/best"
-
-            limpar_tela()
-            print(f"Baixando em {opcoes_video[idx]['res']}...\n")
-            with YoutubeDL(opcoes_download) as ydl:
-                ydl.download([link_video])
-
-        # Caso ocorra algum erro no processo, informa o erro e da continuidade
+            with YoutubeDL(config.opcoes_video()) as ydl:
+                infos = ydl.extract_info(link, download=False)
+            alturas = sorted({
+                f["height"]
+                for f in infos.get("formats", [])
+                if f.get("vcodec") != "none" and f.get("height")
+            })
         except Exception as e:
-            print(f"Ocorreu um erro ao processar o vídeo: {e}")
+            print(f"\nOcorreu um erro ao analisar o vídeo: {e}")
             input("\nPressione ENTER para continuar...")
             continue
 
+        if not alturas:
+            print("Nenhuma resolução de vídeo encontrada!")
+            input("\nPressione ENTER para tentar novamente...")
+            continue
+
         limpar_tela()
+        _cabecalho("Resolução")
+        for i, altura in enumerate(alturas, start=1):
+            print(f"[{i}] {altura}p")
+        print("[0] Cancelar\n")
 
-        # Tela de encerramento para download de vídeos
-        while True:
-            print("{:=^100}".format(" Baixar Vídeo ")+"\n")
-            print("Vídeo baixado com sucesso!\n")
-            print("="*100+"\n")
-            print("1 - Voltar")
-            print("2 - Baixar outro vídeo\n")
-            finish_opt = input("Escolha uma opção: ")
-            if finish_opt == "2":
-                break
-            elif finish_opt == "1":
-                limpar_tela()
-                return
-            else:
-                limpar_tela()
-                print("opção inválida\n")
+        escolha = input("Qual a resolução desejada?: ").strip()
+        if escolha == "0":
+            return
+        if not escolha.isdigit() or not 1 <= int(escolha) <= len(alturas):
+            print("Opção inválida.")
+            input("\nPressione ENTER para continuar...")
+            continue
 
-# Função que executa o download de músicas
-def baixar_musica():
-    while True:
-        limpar_tela()
-
-        # Define o link da música a ser baixado
-        print("{:=^100}".format(" Baixar Música ")+"\n")
-        link_musica = input("Qual o link da música a ser baixada?: ")
-
-        # Faz uma cópia das configurações para música padrão 
-        opcoes = config.opcoes_base_audio.copy()
-
-        # Chama o yt_dlp e baixa o vídeo
-        with YoutubeDL(opcoes) as ydl:
-            ydl.download([link_musica])
-        limpar_tela()
-
-        # Tela de encerramento para download de músicas
-        while True:
-            print("{:=^100}".format(" Baixar Música ")+"\n")
-            print("Música baixada com sucesso!\n")
-            print("="*100+"\n")
-            print("1 - Voltar")
-            print("2 - Baixar outra música\n")
-            finish_opt = input("Escolha uma opção: ")
-            if finish_opt == "2":
-                break
-            elif finish_opt == "1":
-                limpar_tela()
-                return
-            else:
-                limpar_tela()
-                print("opção inválida\n")
-
-# Função que executa o download de playlists
-def baixar_playlist():
-    while True:
-        limpar_tela()
-
-        # Define o link da playlist a ser baixada
-        print("{:=^100}".format(" Baixar Playlist ")+"\n")
-        link_playlist = input("Qual o link da playlist a ser baixada?: ")
-
-        # Faz uma cópia das configurações padrão de download de música (playlist usa as mesmas, apenas com uma modificação do caminho)
-        opcoes = config.opcoes_base_audio.copy()
-        opcoes["outtmpl"] = os.path.join(
-            config.pastaMusica,
-            "%(playlist_title)s",
-            "%(playlist_index)02d - %(title)s.%(ext)s"
+        altura = alturas[int(escolha) - 1]
+        opcoes = config.opcoes_video()
+        # Prefere mp4+m4a (merge direto); o fallback pode sair em .mkv
+        opcoes["format"] = (
+            f"bestvideo[height={altura}][ext=mp4]+bestaudio[ext=m4a]"
+            f"/bestvideo[height={altura}]+bestaudio/best[height={altura}]"
         )
-        opcoes["ignoreerrors"] = True
-        
-        # Chama o yt_dlp e baixa a playlist
-        with YoutubeDL(opcoes) as ydl:
-            ydl.download([link_playlist])
+
         limpar_tela()
-
-        # Tela final do download de playlists
-        while True:
-            print("{:=^100}".format(" Baixar Playlist ")+"\n")
-            print("Playlist baixada com sucesso!\n")
-            print("="*100+"\n")
-            print("1 - Voltar")
-            print("2 - Baixar outra playlist\n")
-            finish_opt = input("Escolha uma opção: ")
-
-            if finish_opt == "2":
-                break
-            elif finish_opt == "1":
-                limpar_tela()
-                return
-            else:
-                limpar_tela()
-                print("opção inválida\n")
+        print(f"Baixando em {altura}p...\n")
+        if not _baixar("Baixar Vídeo", link, opcoes):
+            continue
+        if not _menu_final("Baixar Vídeo"):
+            return

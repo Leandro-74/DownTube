@@ -22,3 +22,7 @@ src/downtube/__pycache__/
 
 # Sobra do clone antigo do provider em TypeScript
 bgutil-ytdlp-pot-provider/
+
+# Artefatos de build do plugin vendorizado
+*.egg-info/
+src/downtube/yt-dlp-plugins/**/build/
