@@ -78,8 +78,8 @@ def linhas_resolucao(alturas: list, aviso: str = "") -> list:
 
 
 # Tela de encerramento de um download
-def linhas_final(tipo: str) -> list:
-    return [
+def linhas_final(tipo: str, aviso: str = "") -> list:
+    linhas = [
         f"DownTube - Baixar {tipo}",
         _sep(),
         "Download concluído!",
@@ -87,6 +87,9 @@ def linhas_final(tipo: str) -> list:
         "1. Voltar ao menu",
         "2. Baixar outro",
     ]
+    if aviso:
+        linhas += [_sep(), aviso]
+    return linhas
 
 
 # Desenha a caixa completa e devolve o cursor para dentro dela, após o prompt
