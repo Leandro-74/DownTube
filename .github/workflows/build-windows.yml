@@ -29,7 +29,20 @@ jobs:
       - name: Baixa o ffmpeg (Windows)
         shell: pwsh
         run: |
-          Invoke-WebRequest -Uri "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip" -OutFile "ffmpeg.zip"
+          $urls = @(
+            "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip",
+            "https://github.com/BtbN/FFmpeg-Builds/releases/latest/download/ffmpeg-master-latest-win64-gpl.zip"
+          )
+          foreach ($url in $urls) {
+            Remove-Item "ffmpeg.zip" -ErrorAction SilentlyContinue
+            try {
+              Invoke-WebRequest -Uri $url -OutFile "ffmpeg.zip"
+              break
+            } catch {
+              Write-Warning "Falha ao baixar $url : $_"
+            }
+          }
+          if (-not (Test-Path "ffmpeg.zip")) { throw "Nenhum mirror do ffmpeg disponível" }
           Expand-Archive -Path "ffmpeg.zip" -DestinationPath "ffmpeg_extracted"
           $bin = Get-ChildItem -Path "ffmpeg_extracted" -Recurse -Filter "ffmpeg.exe" | Select-Object -First 1
           Copy-Item $bin.FullName -Destination "ffmpeg.exe"
