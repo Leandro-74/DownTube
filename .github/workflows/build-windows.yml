@@ -81,9 +81,19 @@ jobs:
           name: downtube-windows
           path: src/downtube/dist/downtube.exe
 
+      - name: Extrai a seção da versão no CHANGELOG
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: pwsh
+        run: |
+          $versao = "${{ github.ref_name }}" -replace '^v', ''
+          $padrao = '(?ms)^##\s*\[' + [regex]::Escape($versao) + '\][^\n]*\n(.*?)(?=^##\s|\z)'
+          $secao = [regex]::Match((Get-Content CHANGELOG.md -Raw -Encoding utf8), $padrao)
+          if (-not $secao.Success) { throw "Sem a seção [$versao] no CHANGELOG.md" }
+          $secao.Groups[1].Value.Trim() | Out-File -FilePath "$env:GITHUB_WORKSPACE\release_body.md" -Encoding utf8
+
       - name: Anexa o .exe na Release (quando disparado por tag)
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          generate_release_notes: true
+          body_path: ${{ github.workspace }}/release_body.md
           files: src/downtube/dist/downtube.exe
