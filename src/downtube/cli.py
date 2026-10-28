@@ -6,6 +6,7 @@ import subprocess
 import sys
 
 import config
+import console
 import menu
 
 
@@ -129,6 +130,7 @@ def _acao_video() -> None:
 
 # Loop principal: redesenha o menu e despacha a opção escolhida
 def run() -> None:
+    console.ajustar_janela()
     acoes = {
         "1": _acao_musica,
         "2": _acao_playlist,
