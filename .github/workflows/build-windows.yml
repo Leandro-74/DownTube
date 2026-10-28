@@ -42,6 +42,13 @@ jobs:
         run: |
           Invoke-WebRequest -Uri "https://github.com/jim60105/bgutil-ytdlp-pot-provider-rs/releases/download/v0.8.1/bgutil-pot-windows-x86_64.exe" -OutFile "bgutil-pot.exe"
 
+      - name: Baixa o deno (JS runtime exigido pelo yt-dlp)
+        shell: pwsh
+        run: |
+          Invoke-WebRequest -Uri "https://github.com/denoland/deno/releases/latest/download/deno-x86_64-pc-windows-msvc.zip" -OutFile "deno.zip"
+          Expand-Archive -Path "deno.zip" -DestinationPath "deno_extracted"
+          Copy-Item "deno_extracted/deno.exe" -Destination "deno.exe"
+
       - name: Gera o executável com PyInstaller
         run: |
           pyinstaller --onefile --console --name downtube `
@@ -49,6 +56,7 @@ jobs:
             --add-binary "ffmpeg.exe;." `
             --add-binary "ffprobe.exe;." `
             --add-binary "bgutil-pot.exe;." `
+            --add-binary "deno.exe;." `
             --add-data "yt-dlp-plugins;yt-dlp-plugins" `
             --collect-all yt_dlp `
             main.py

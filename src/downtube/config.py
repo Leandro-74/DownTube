@@ -71,7 +71,7 @@ def iniciar_bgutil_server():
 
     try:
         _bgutil_processo = subprocess.Popen(
-            [binario, "server", "--port", str(BGUTIL_PORT)],
+            [binario, "server", "--host", "127.0.0.1", "--port", str(BGUTIL_PORT)],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )

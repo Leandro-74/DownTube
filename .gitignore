@@ -16,6 +16,8 @@ src/downtube/ffprobe
 src/downtube/ffprobe.exe
 src/downtube/bgutil-pot
 src/downtube/bgutil-pot.exe
+src/downtube/deno
+src/downtube/deno.exe
 src/downtube/qjs
 src/downtube/backup/
 src/downtube/__pycache__/
