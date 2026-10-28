@@ -3,6 +3,7 @@
 import json
 import os
 import subprocess
+import sys
 
 import config
 import menu
@@ -150,6 +151,11 @@ def run() -> None:
 
 # Entry point chamado pelo main.py
 def main() -> None:
+    # Saída redirecionada (pipe/arquivo) usa a codificação do sistema, que não
+    # cobre os caracteres da caixa: força UTF-8 nesse caso
+    if not sys.stdout.isatty():
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+
     try:
         run()
     except (KeyboardInterrupt, EOFError):
