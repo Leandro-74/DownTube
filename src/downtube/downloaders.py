@@ -1,6 +1,6 @@
+import json
 import os
-
-from yt_dlp import YoutubeDL
+import subprocess
 
 import config
 
@@ -19,15 +19,20 @@ def _pedir_link(titulo, pergunta):
     return input(pergunta).strip()
 
 
-def _baixar(titulo, link, opcoes):
+def _executar(args):
+    """Roda o yt-dlp herdando a saída. Retorna True em caso de sucesso."""
     try:
-        with YoutubeDL(opcoes) as ydl:
-            ydl.download([link])
-        return True
-    except Exception as e:
-        print(f"\nOcorreu um erro ao baixar: {e}")
+        codigo = subprocess.run([config.YTDLP, *args]).returncode
+    except OSError as e:
+        print(f"\nErro ao executar o yt-dlp: {e}")
         input("\nPressione ENTER para continuar...")
         return False
+
+    if codigo != 0:
+        print(f"\nO download falhou (yt-dlp retornou código {codigo}).")
+        input("\nPressione ENTER para continuar...")
+        return False
+    return True
 
 
 def _menu_final(titulo):
@@ -50,13 +55,13 @@ def _menu_final(titulo):
             print("Opção inválida.\n")
 
 
-def _baixar_em_loop(titulo, pergunta, montar_opcoes):
+def _baixar_em_loop(titulo, pergunta, montar_args):
     while True:
         link = _pedir_link(titulo, pergunta)
         if not link:
             return
 
-        if not _baixar(titulo, link, montar_opcoes()):
+        if not _executar([*montar_args(), link]):
             continue
         if not _menu_final(titulo):
             return
@@ -66,7 +71,7 @@ def baixar_musica():
     _baixar_em_loop(
         "Baixar Música",
         "Qual o link da música a ser baixada?: ",
-        config.opcoes_audio,
+        config.args_musica,
     )
 
 
@@ -74,8 +79,32 @@ def baixar_playlist():
     _baixar_em_loop(
         "Baixar Playlist",
         "Qual o link da playlist a ser baixada?: ",
-        config.opcoes_playlist,
+        config.args_playlist,
     )
+
+
+def _listar_alturas(link):
+    """Retorna as alturas disponíveis, ou None se não foi possível analisar."""
+    resultado = subprocess.run(
+        [config.YTDLP, *config.args_metadados(), link],
+        stdout=subprocess.PIPE,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+    )
+    if resultado.returncode != 0:
+        return None
+
+    try:
+        info = json.loads(resultado.stdout)
+    except json.JSONDecodeError:
+        return None
+
+    return sorted({
+        f["height"]
+        for f in info.get("formats", [])
+        if f.get("vcodec") != "none" and f.get("height")
+    })
 
 
 def baixar_video():
@@ -84,20 +113,11 @@ def baixar_video():
         if not link:
             return
 
-        # Lista as resoluções disponíveis sem baixar nada
-        try:
-            with YoutubeDL(config.opcoes_video()) as ydl:
-                infos = ydl.extract_info(link, download=False)
-            alturas = sorted({
-                f["height"]
-                for f in infos.get("formats", [])
-                if f.get("vcodec") != "none" and f.get("height")
-            })
-        except Exception as e:
-            print(f"\nOcorreu um erro ao analisar o vídeo: {e}")
+        alturas = _listar_alturas(link)
+        if alturas is None:
+            print("\nNão foi possível obter as informações do vídeo.")
             input("\nPressione ENTER para continuar...")
             continue
-
         if not alturas:
             print("Nenhuma resolução de vídeo encontrada!")
             input("\nPressione ENTER para tentar novamente...")
@@ -118,16 +138,9 @@ def baixar_video():
             continue
 
         altura = alturas[int(escolha) - 1]
-        opcoes = config.opcoes_video()
-        # Prefere mp4+m4a (merge direto); o fallback pode sair em .mkv
-        opcoes["format"] = (
-            f"bestvideo[height={altura}][ext=mp4]+bestaudio[ext=m4a]"
-            f"/bestvideo[height={altura}]+bestaudio/best[height={altura}]"
-        )
-
         limpar_tela()
         print(f"Baixando em {altura}p...\n")
-        if not _baixar("Baixar Vídeo", link, opcoes):
+        if not _executar([*config.args_video(altura), link]):
             continue
         if not _menu_final("Baixar Vídeo"):
             return

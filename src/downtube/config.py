@@ -1,11 +1,12 @@
-# Configurações: binários, PO Token e opções base do yt-dlp
+# Configurações: binários, PO Token, yt-dlp e pastas de destino
 
 import atexit
-import importlib.util
 import os
+import platform
 import subprocess
 import sys
 import time
+import urllib.request
 
 
 # Localiza a pasta com os binários (ffmpeg, bgutil-pot)
@@ -24,8 +25,68 @@ def get_ffmpeg_path():
 
 ffmpeg_dir = get_ffmpeg_path()
 
-# PATH para o plugin do PO Token encontrar o binário
+# PATH para o yt-dlp encontrar ffmpeg, deno e bgutil-pot
 os.environ["PATH"] = ffmpeg_dir + os.pathsep + os.environ.get("PATH", "")
+
+
+def _pasta_cache():
+    if os.name == "nt":
+        # Fora do AppData: o Python da Microsoft Store redireciona escritas pra lá,
+        # e o yt-dlp executado como subprocesso não enxerga o arquivo nesse caminho
+        caminho = os.path.join(os.path.expanduser("~"), ".downtube")
+    else:
+        base = os.environ.get("XDG_CACHE_HOME") or os.path.join(os.path.expanduser("~"), ".cache")
+        caminho = os.path.join(base, "downtube")
+    os.makedirs(caminho, exist_ok=True)
+    return caminho
+
+
+# --- yt-dlp: binário oficial, baixado e mantido atualizado em tempo de execução ---
+
+def _nome_ytdlp():
+    if os.name == "nt":
+        return "yt-dlp.exe"
+    if platform.machine().lower() in ("aarch64", "arm64"):
+        return "yt-dlp_linux_aarch64"
+    return "yt-dlp_linux"
+
+
+YTDLP = os.path.join(_pasta_cache(), _nome_ytdlp())
+_CARIMBO = os.path.join(_pasta_cache(), "ytdlp-atualizado")
+_INTERVALO_ATUALIZACAO = 24 * 60 * 60  # 1 dia
+
+
+def _baixar_ytdlp():
+    url = f"https://github.com/yt-dlp/yt-dlp/releases/latest/download/{_nome_ytdlp()}"
+    print("Baixando yt-dlp (primeira execução)...")
+    temporario = YTDLP + ".part"
+    urllib.request.urlretrieve(url, temporario)
+    os.replace(temporario, YTDLP)
+    if os.name != "nt":
+        os.chmod(YTDLP, 0o755)
+
+
+def garantir_ytdlp():
+    """Garante o binário do yt-dlp e tenta atualizá-lo uma vez por dia."""
+    if not os.path.isfile(YTDLP):
+        try:
+            _baixar_ytdlp()
+        except Exception as e:
+            print(f"[erro] Não foi possível baixar o yt-dlp: {e}")
+            raise SystemExit(1)
+    elif not os.path.exists(_CARIMBO) or time.time() - os.path.getmtime(_CARIMBO) > _INTERVALO_ATUALIZACAO:
+        # `-U` é o updater oficial; se falhar (offline), segue com a versão atual
+        try:
+            resultado = subprocess.run([YTDLP, "-U"], capture_output=True, text=True, timeout=120)
+            if "Updated" in resultado.stdout:
+                print(resultado.stdout.strip())
+        except (OSError, subprocess.TimeoutExpired):
+            pass
+
+    open(_CARIMBO, "w").close()
+
+
+# --- PO Token provider (bgutil-pot) ---
 
 BGUTIL_PORT = 4416
 
@@ -43,16 +104,6 @@ def get_plugin_path():
     return os.path.join(ffmpeg_dir, "yt-dlp-plugins", "bgutil-ytdlp-pot-provider")
 
 
-try:
-    _plugin_spec = importlib.util.find_spec("yt_dlp_plugins.extractor.getpot_bgutil_http")
-except ModuleNotFoundError:
-    _plugin_spec = None
-
-if _plugin_spec is None:
-    _plugin_path = get_plugin_path()
-    if os.path.isdir(_plugin_path):
-        sys.path.insert(0, _plugin_path)
-
 _bgutil_processo = None
 
 
@@ -65,12 +116,13 @@ def iniciar_bgutil_server():
 
     binario = get_bgutil_binary_path()
     if not os.path.isfile(binario):
-        # Não impede o app de funcionar; só fica sem PO Token (volta pro 360p)
+        # Não impede o app de funcionar; só fica sem PO Token
         print(f"[aviso] bgutil-pot não encontrado em {binario}, seguindo sem PO Token provider.")
         return
 
     try:
         _bgutil_processo = subprocess.Popen(
+            # --host explícito: por padrão ele escuta só em IPv6 e o plugin usa 127.0.0.1
             [binario, "server", "--host", "127.0.0.1", "--port", str(BGUTIL_PORT)],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
@@ -93,6 +145,7 @@ def parar_bgutil_server():
 
 
 iniciar_bgutil_server()
+garantir_ytdlp()
 
 
 # Pasta de destino: variável de ambiente > pasta localizada no sistema (PT, depois EN)
@@ -112,36 +165,52 @@ pastaMusica = _resolver_pasta("DOWNTUBE_MUSIC_DIR", ("Músicas", "Music"))
 pastaVideo = _resolver_pasta("DOWNTUBE_VIDEO_DIR", ("Vídeos", "Videos"))
 
 
-def opcoes_audio():
-    return {
-        "format": "bestaudio/best",
-        "remote_components": ["ejs:github"],
-        "ffmpeg_location": ffmpeg_dir,
-        "outtmpl": os.path.join(pastaMusica, "%(title)s.%(ext)s"),
-        "postprocessors": [
-            {
-                "key": "FFmpegExtractAudio",
-                "preferredcodec": "mp3",
-                "preferredquality": "192",
-            }
-        ],
-    }
+# --- Argumentos do yt-dlp ---
+
+def _args_base():
+    args = [
+        "--ffmpeg-location", ffmpeg_dir,
+        "--remote-components", "ejs:github",
+    ]
+    # --plugin-dirs itera os filhos do diretório; o filho deve conter yt_dlp_plugins
+    plugin = os.path.dirname(get_plugin_path())
+    if os.path.isdir(plugin):
+        args += ["--plugin-dirs", plugin]
+    return args
 
 
-def opcoes_playlist():
-    opcoes = opcoes_audio()
-    opcoes["outtmpl"] = os.path.join(
-        pastaMusica, "%(playlist_title)s", "%(playlist_index)02d - %(title)s.%(ext)s"
-    )
-    opcoes["ignoreerrors"] = True  # um vídeo indisponível não derruba a playlist
-    return opcoes
+def args_musica():
+    return [
+        *_args_base(),
+        "-x", "--audio-format", "mp3", "--audio-quality", "192",
+        "-o", os.path.join(pastaMusica, "%(title)s.%(ext)s"),
+    ]
 
 
-def opcoes_video():
-    return {
-        "format": "bestvideo+bestaudio/best",
-        "remote_components": ["ejs:github"],
-        "ffmpeg_location": ffmpeg_dir,
-        "outtmpl": os.path.join(pastaVideo, "%(title)s.%(ext)s"),
-        "merge_output_format": "mp4",
-    }
+def args_playlist():
+    return [
+        *_args_base(),
+        "-x", "--audio-format", "mp3", "--audio-quality", "192",
+        "--ignore-errors",  # um vídeo indisponível não derruba a playlist
+        "-o", os.path.join(
+            pastaMusica, "%(playlist_title)s", "%(playlist_index)02d - %(title)s.%(ext)s"
+        ),
+    ]
+
+
+def args_metadados():
+    return [*_args_base(), "-J", "--skip-download", "--no-playlist"]
+
+
+def args_video(altura):
+    # Prefere mp4+m4a (merge direto); o fallback pode sair em .mkv
+    return [
+        *_args_base(),
+        "-f", (
+            f"bestvideo[height={altura}][ext=mp4]+bestaudio[ext=m4a]"
+            f"/bestvideo[height={altura}]+bestaudio/best[height={altura}]"
+        ),
+        "--merge-output-format", "mp4",
+        "--no-playlist",
+        "-o", os.path.join(pastaVideo, "%(title)s.%(ext)s"),
+    ]

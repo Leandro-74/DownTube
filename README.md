@@ -20,6 +20,7 @@ Construído em cima do [yt-dlp](https://github.com/yt-dlp/yt-dlp), com suporte a
 - 🎬 **Baixar vídeo** — escolha a resolução, de 144p até 1080p+
 - 📃 **Baixar playlist inteira** — organiza automaticamente em pastas numeradas
 - 🔓 **PO Token integrado** — resolve o bloqueio do YouTube que limita downloads a 360p sem token, usando o [bgutil-pot](https://github.com/jim60105/bgutil-ytdlp-pot-provider-rs) rodando localmente em background
+- 🔄 **yt-dlp sempre atualizado** — o binário oficial é baixado na primeira execução e se atualiza sozinho (1x/dia), sem precisar esperar uma nova versão do DownTube
 - 🗂️ Detecta automaticamente as pastas de Música/Vídeos do seu usuário (PT-BR ou EN-US)
 
 ---
@@ -34,7 +35,7 @@ cd DownTube
 makepkg -si
 ```
 
-Isso instala automaticamente as dependências necessárias (`python`, `yt-dlp`, `ffmpeg`, `deno`) e o binário do PO Token provider. Depois disso, rode de qualquer lugar do sistema:
+Isso instala automaticamente as dependências necessárias (`python`, `ffmpeg`, `deno`) e o binário do PO Token provider. O `yt-dlp` é baixado sozinho na primeira execução. Depois disso, rode de qualquer lugar do sistema:
 
 ```bash
 downtube
@@ -44,12 +45,10 @@ downtube
 
 | Pacote | Pra quê serve |
 |---|---|
-| `yt-dlp` | Motor de download/extração |
+| `yt-dlp` *(automático)* | Motor de download/extração — baixado na primeira execução e mantido atualizado |
 | `ffmpeg` | Conversão de áudio/mux de vídeo |
 | `deno` | Resolve os desafios de JavaScript do YouTube |
 | `bgutil-pot` *(embutido)* | Gera o PO Token pra liberar resoluções altas |
-
-> **Dica:** instale também o pacote opcional `yt-dlp-ejs` para evitar que o `deno` precise baixar o solucionador de desafios JS na primeira execução.
 
 ---
 
@@ -59,7 +58,7 @@ downtube
 2. Baixe o `downtube.exe` mais recente
 3. Execute — na primeira vez, o Windows Defender/SmartScreen pode avisar que é "aplicativo desconhecido". Clique em **Mais informações → Executar assim mesmo** (é normal para executáveis sem certificado de assinatura pago)
 
-O `.exe` já vem com tudo embutido (`ffmpeg`, `bgutil-pot`, plugin de PO Token) — não precisa instalar nada além dele.
+O `.exe` já vem com tudo embutido (`ffmpeg`, `bgutil-pot`, plugin de PO Token) — não precisa instalar nada além dele. Na primeira execução ele baixa o `yt-dlp` mais recente (precisa de internet) e depois o mantém atualizado sozinho.
 
 ---
 
@@ -68,9 +67,10 @@ O `.exe` já vem com tudo embutido (`ffmpeg`, `bgutil-pot`, plugin de PO Token) 
 ```bash
 git clone https://github.com/Leandro-74/DownTube.git
 cd DownTube/src/downtube
-pip install -r ../../requirements.txt
 python3 main.py
 ```
+
+Não há dependências Python — o app usa apenas a biblioteca padrão e chama o binário oficial do `yt-dlp` (baixado automaticamente na primeira execução).
 
 Pra ter resoluções acima de 360p em modo dev, você também precisa do binário `bgutil-pot` e da pasta `yt-dlp-plugins/` na mesma pasta do `config.py` — veja a seção de PO Token abaixo.
 
