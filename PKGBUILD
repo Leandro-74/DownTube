@@ -1,6 +1,6 @@
 # Maintainer: Leandro A. Rodrigues <SEU_EMAIL_AQUI>
 pkgname=downtube
-pkgver=1.1.0
+pkgver=1.1.1
 pkgrel=1
 pkgdesc="TUI para baixar vídeos, músicas e playlists do YouTube via yt-dlp"
 arch=('x86_64')
