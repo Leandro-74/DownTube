@@ -5,8 +5,8 @@ __pycache__/
 *.mp3
 
 # PyInstaller
-/build
-/dist
+build/
+dist/
 *.spec
 
 # Binários grandes - não versionar
@@ -25,4 +25,3 @@ bgutil-ytdlp-pot-provider/
 
 # Artefatos de build do plugin vendorizado
 *.egg-info/
-src/downtube/yt-dlp-plugins/**/build/
