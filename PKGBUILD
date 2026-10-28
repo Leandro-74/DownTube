@@ -23,7 +23,8 @@ package() {
   install -d "$pkgdir/usr/lib/downtube"
   install -Dm644 src/downtube/main.py        "$pkgdir/usr/lib/downtube/main.py"
   install -Dm644 src/downtube/config.py      "$pkgdir/usr/lib/downtube/config.py"
-  install -Dm644 src/downtube/downloaders.py "$pkgdir/usr/lib/downtube/downloaders.py"
+  install -Dm644 src/downtube/cli.py         "$pkgdir/usr/lib/downtube/cli.py"
+  install -Dm644 src/downtube/menu.py        "$pkgdir/usr/lib/downtube/menu.py"
 
   # Binario do PO Token provider - fica em /usr/bin, igual o config.py ja espera
   install -Dm755 "$srcdir/bgutil-pot-linux-x86_64" "$pkgdir/usr/bin/bgutil-pot"
